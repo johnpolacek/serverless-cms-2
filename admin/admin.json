@@ -1,0 +1,7 @@
+{  
+   "siteTitle":"Serverless CMS!",
+   "siteDescription":"Demo for Building a Custom Serverless CMS for Static Sites with Amazon Cognito and S3",
+   "calloutHeadline":"Serverless Static Site Generator CMS",
+   "calloutText":"<p>Using <a href=\"https://aws.amazon.com/sdk-for-browser/\" target=\"_blank\" rel=\"noopener noreferrer\">AWS SDK for JavaScript in the Browser</a> and <em>less than 100 lines of JavaScript</em>, we can create a custom CMS&nbsp;for generating a static website hosted on S3 without a database.</p>\n<p><strong>For more info, read <a href=\"https://css-tricks.com/build-custom-cms-serverless-static-site-generator/\">Build a Custom CMS for a Serverless Static Site Generator</a>&nbsp;or&nbsp;view the <a href=\"https://github.com/johnpolacek/serverless-cms\">project files on github</a>.</strong></p>",
+   "calloutBackgroundImage":""
+}

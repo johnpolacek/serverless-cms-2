@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+  	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+		<meta name="description" content="">
+		<meta name="author" content="">
+
+		<title>Serverless CMS Admin</title>
+
+		<!-- Bootstrap core CSS -->
+		<link href="../css/bootstrap.min.css" rel="stylesheet">
+
+		<!-- Custom styles for this template -->
+		<link href="css/signin.css" rel="stylesheet">
+  	</head>
+
+  <body>
+
+  	<div class="container p-3">
+
+		<form id="form-login" class="form-signin">
+			<h2 class="form-signin-heading">Please sign in</h2>
+			<label for="inputUsername" class="sr-only">User Name</label>
+			<input type="text" id="inputUsername" class="form-control" placeholder="User Name" required autofocus />
+			<label for="inputPassword" class="sr-only">Password</label>
+			<input type="password" id="inputPassword" class="form-control" placeholder="Password" required />
+			<div class="checkbox">
+				<label>
+					<input type="checkbox" value="remember-me" /> Remember me
+				</label>
+			</div>
+			<button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+		</form>
+
+		<form id="form-password" class="form-signin" hidden>
+			<h2 class="form-signin-heading">Set a new password to continue</h2>
+			<label for="inputNewPassword" class="sr-only">Password</label>
+			<input type="password" id="inputNewPassword" class="form-control" placeholder="New Password" required />
+			<button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+		</form>
+
+	</div> <!-- /container -->
+
+	<script src="js/jsbn.js"></script>
+    <script src="js/jsbn2.js"></script>
+    <script src="js/sjcl.js"></script>
+    <script src="js/aws-cognito-sdk.min.js"></script>
+    <script src="js/amazon-cognito-identity.min.js"></script>
+	<script src="js/aws-sdk.min.js"></script>
+	<script src="js/jquery-3.1.1.min.js"></script>
+	<script src='js/tinymce/tinymce.min.js'></script>
+	<script src="js/jsrender.min.js"></script>
+	<script type="text/x-jsrender" id="adminNav">
+		<nav class="navbar navbar-light rounded bg-faded my-4">
+			<div class="navbar-collapse" id="navbarNav">
+				<ul class="nav navbar-nav d-flex flex-row">
+					<li class="nav-item pl-2 pr-3 mr-1 border-right">
+						<a class="nav-link text-primary" href="#adminIndex">Admin</a>
+					</li>
+					<li class="nav-item px-2{{if active=='adminIndex'}} active{{/if}}">
+						<a class="nav-link" href="#adminIndex">Home {{if active=='adminIndex'}}<span class="sr-only">(current)</span>{{/if}}</a>
+					</li>
+					<li class="nav-item px-2{{if active=='adminBlog'}} active{{/if}}">
+						<a class="nav-link" href="#adminBlog">Blog {{if active=='adminBlog'}}<span class="sr-only">(current)</span>{{/if}}</a>
+					</li>
+				</ul>
+			</div>
+		</nav>
+	</script>
+	<script type="text/x-jsrender" id="adminIndex">
+		{{include tmpl='adminNav' /}}
+		<form class="py-2" id="form-admin">
+			<h3 class="py-2">Site Info</h3>
+			<div class="form-group">
+			    <label for="siteTitle">Title</label>
+			    <input type="text" value="{{>siteTitle}}" class="form-control" id="siteTitle" name="siteTitle" aria-describedby="siteTitleInfo" />
+			    <small id="siteTitleInfo" class="form-text text-muted">The title of the site appears in the upper left corner of the nav bar and in the browser address bar.</small>
+			</div>
+			<div class="form-group pb-2">
+			    <label for="siteDescription">Description</label>
+			    <input type="text" value="{{>siteDescription}}" class="form-control" id="siteDescription" name="siteDescription" aria-describedby="siteDescriptionInfo" />
+			    <small id="siteDescriptionInfo" class="form-text text-muted">Set the meta description for the site which will show up in search results and social sharing.</small>
+			</div>
+			<hr>
+			<h3 class="py-2">Main Callout</h3>
+			<div class="form-group">
+			    <label for="calloutHeadline">Headline</label>
+			    <input type="text" value="{{>calloutHeadline}}" class="form-control" id="calloutHeadline" name="calloutHeadline" aria-describedby="calloutHeadlineInfo" />
+			    <small id="calloutHeadlineInfo" class="form-text text-muted">Set the content for the main headline.</small>
+			</div>
+			<div class="form-group">
+			    <label for="calloutText">Text</label>
+			    <textarea class="form-control" id="calloutText" name="calloutText" aria-describedby="calloutTextInfo" rows="3">{{>calloutText}}</textarea>
+			    <small id="calloutTextInfo" class="form-text text-muted">Set the text content that is below the main headline.</small>
+			 </div>
+			<div class="form-group">
+			    <label for="backgroundImage">Background Image</label>
+			    <input type="file" class="form-control" id="calloutBackgroundImage" name="calloutBackgroundImage" aria-describedby="calloutBackgroundImageInfo" accept="image/*" />
+			    <small id="calloutBackgroundImageInfo" class="form-text text-muted">Add an image to appear in the background of the callout.</small>
+			</div>
+			<div class="text-xs-right">
+				<button id="cancelEdit" class="btn btn-link">Cancel</button>
+				<button type="submit" class="btn btn-primary">Save</button>
+			</div>
+		</form>
+	</script>
+	<script type="text/x-jsrender" id="adminBlog">
+		{{include tmpl='adminNav' /}}
+		<div id="blogPosts">
+			<h3 class="py-2">Blog Posts</h3>
+			<button id="newPostButton" class="btn btn-primary my-1">+ New Post</button>
+			{{if posts}}
+				<div class="container p-0">
+					<ul class="list-group d-inline-block">
+						{{for posts}}
+							<li class="list-group-item">
+								<span class="pr-3">{{>title}}</span>
+								<a href="../{{>url}}" target="_blank" class="pl-3 float-xs-right">view</a>
+								<a href="#" data-id="{{:#getIndex()}}" data-url="{{>url}}" class="edit-post pl-3 float-xs-right">edit</a>
+							</li>
+						{{/for}}
+					</ul>
+				</div>
+			{{/if}}
+		</div>
+	</script>
+	<script type="text/x-jsrender" id="editBlogPost">
+		<form class="py-2" id="form-blog" data-post-id="{{>id}}">
+			{{if title}}
+				<h3 class="py-2">Edit Blog Post</h3>
+			{{else}}
+				<h3 class="py-2">New Blog Post</h3>
+			{{/if}}
+			<div class="form-group">
+			    <label for="title">Title</label>
+			    <input type="text" value="{{>title}}" class="form-control" id="title" name="title" />
+			</div>
+			<div class="form-group pb-2">
+				<textarea class="form-control" id="postContent" name="postContent" rows="12">{{:content}}</textarea>
+			</div>
+			<div class="hidden-xs-up">
+				<input type="file" id="imageUploadFile" />
+			</div>
+			<div class="text-xs-right">
+				<button id="cancelEdit" class="btn btn-link">Cancel</button>
+				<button type="submit" class="btn btn-primary">Save</button>
+			</div>
+		</form>
+	</script>
+	<script type="text/x-jsrender" id="siteNav">
+		<nav class="navbar navbar-static-top navbar-dark bg-inverse">
+			<a class="navbar-brand pr-2" href="#">{{>siteTitle}}</a>
+			<ul class="nav navbar-nav">
+				<li class="nav-item{{if active=='index'}} active{{/if}}">
+					<a class="nav-link" href="{{>navPath}}index.html">Home {{if active=='index'}}<span class="sr-only">(current)</span>{{/if}}</a>
+				</li>
+				<li class="nav-item{{if active=='blog'}} active{{/if}}">
+					<a class="nav-link" href="{{>navPath}}blog.html">Blog {{if active=='blog'}}<span class="sr-only">(current)</span>{{/if}}</a>
+				</li>
+				<li class="nav-item{{if active=='contact'}} active{{/if}}">
+					<a class="nav-link" href="{{>navPath}}contact.html">Contact {{if active=='contact'}}<span class="sr-only">(current)</span>{{/if}}</a>
+				</li>
+			</ul>
+		</nav>
+	</script>
+	<script type="text/x-jsrender" id="siteFooter">
+		<footer>
+			<p>A demo by Chicago Web Developer John Polacek</p>
+			<p style="line-height: 1.8;">
+				Website: <a href="http:johnpolacek.com">johnpolacek.com</a><br>
+				Twitter: <a href="http://twitter.com/johnpolacek">@johnpolacek</a><br>
+				Github: <a href="http://johnpolacek.github.io">johnpolacek.github.io</a><br>
+				LinkedIn: <a href="https://www.linkedin.com/in/johnpolacek">linkedin/johnpolacek</a><br>
+				Works at: <a href="http://gesture.com">Gesture</a>, the <a href="http://gesture.com/mobile-bidding">mobile bidding fundraising platform</a> for charity events.
+			</p>
+		</footer>
+	</script>
+	<script type="text/x-jsrender" id="indexTemplate">
+		<html lang="en">
+			<head>
+				<meta charset="utf-8">
+				<meta http-equiv="X-UA-Compatible" content="IE=edge">
+				<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+				<meta name="description" content="{{>siteDescription}}">
+				<meta name="author" content="">
+				<title>{{>siteTitle}}</title>
+				<link href="css/bootstrap.min.css" rel="stylesheet">
+				<link href="css/jumbotron.css" rel="stylesheet">
+			</head>
+			<body>
+				{{include tmpl='siteNav' /}}
+				<div class="jumbotron">
+					<div class="container">
+						<h1 class="display-3">{{>calloutHeadline}}</h1>
+						{{:calloutText}}
+						<p><a class="btn btn-primary btn-lg" href="#" role="button">Learn more &raquo;</a></p>
+					</div>
+				</div>
+				<div class="container">
+					<div class="row">
+						<div class="col-md-4">
+							<h2>Heading</h2>
+							<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+							<p><a class="btn btn-secondary" href="#" role="button">View details &raquo;</a></p>
+						</div>
+						<div class="col-md-4">
+							<h2>Heading</h2>
+							<p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+							<p><a class="btn btn-secondary" href="#" role="button">View details &raquo;</a></p>
+					 </div>
+						<div class="col-md-4">
+							<h2>Heading</h2>
+							<p>Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
+							<p><a class="btn btn-secondary" href="#" role="button">View details &raquo;</a></p>
+						</div>
+					</div>
+					<hr>
+					{{include tmpl='siteFooter' /}}
+				</div> <!-- /container -->
+			</body>
+		</html>
+	</script>
+	<script type="text/x-jsrender" id="blogTemplate">
+		<html lang="en">
+			<head>
+				<meta charset="utf-8">
+				<meta http-equiv="X-UA-Compatible" content="IE=edge">
+				<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+				<meta name="description" content="{{>siteDescription}}">
+				<meta name="author" content="">
+				<title>{{>siteTitle}} - Blog</title>
+				<link href="css/bootstrap.min.css" rel="stylesheet">
+			</head>
+			<body>
+				{{include tmpl='siteNav' /}}
+				<div class="container">
+					{{for posts}}
+						<div class="container pb-3">
+							<h1 class="pt-3 pb-1">{{>title}}</h1>
+							<p>{{>excerpt}}</p>
+							<a href="./{{>url}}">Read full article</a>
+						</div>
+						<hr>
+					{{/for}}
+					
+					<div class="p-1">
+						{{include tmpl='siteFooter' /}}
+					</div>
+				</div>
+			</body>
+		</html>
+	</script>
+	<script type="text/x-jsrender" id="blogPostTemplate">
+		<html lang="en">
+			<head>
+				<meta charset="utf-8">
+				<meta http-equiv="X-UA-Compatible" content="IE=edge">
+				<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+				<meta name="description" content="{{>siteDescription}}">
+				<meta name="author" content="">
+				<title>{{>siteTitle}} - Blog - {{>title}}</title>
+				<link href="../css/bootstrap.min.css" rel="stylesheet">
+			</head>
+			<body>
+				{{include tmpl='siteNav' /}}
+				<div class="container">
+					<h1 class="pt-3 pb-1">{{>title}}</h1>
+					<div id="content">
+						{{:content}}	
+					</div>
+					<p class="py-3"><a href="../blog.html">Read other blog posts</a></p>
+					<hr>
+					<div class="pt-1">
+						{{include tmpl='siteFooter' /}}		
+					</div>
+				</div>
+			</body>
+		</html>
+	</script>
+	<script type="text/x-jsrender" id="contactTemplate">
+		<html lang="en">
+			<head>
+				<meta charset="utf-8">
+				<meta http-equiv="X-UA-Compatible" content="IE=edge">
+				<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+				<meta name="description" content="{{>siteDescription}}">
+				<meta name="author" content="">
+				<title>{{>siteTitle}} - Contact Information</title>
+				<link href="css/bootstrap.min.css" rel="stylesheet">
+			</head>
+			<body>
+				{{include tmpl='siteNav' /}}
+				<div class="container p-3">
+					<div class="p-3">
+						{{include tmpl='siteFooter' /}}
+					</div>			
+				</div>
+			</body>
+		</html>
+	</script>
+	<script>
+		$(function() {
+
+			// Templates
+			$('script[type="text/x-jsrender"]').each(function() {
+				$.templates($(this).attr('id'), '#'+$(this).attr('id'));
+			});
+
+			// Login
+			var cognitoUser, s3;
+
+		    $('.form-signin').on('submit',function(e) {
+		    	e.preventDefault();
+		    	var authenticationData = {
+			        Username : $('#inputUsername').val(),
+			        Password : $('#inputPassword').val()
+			    };
+			    var authenticationDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authenticationData);
+			    var poolData = { 
+			        UserPoolId : 'us-east-1_b388hyeFn',
+			        ClientId : '727ajf5tmls49n4orb6302rqj5'
+			    };
+			    var userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(poolData);
+			    var userData = {
+			        Username : $('#inputUsername').val(),
+			        Pool : userPool
+			    };
+			    
+			    cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+			    cognitoUser.authenticateUser(authenticationDetails, {
+			    	newPasswordRequired: function(userAttributes, requiredAttributes) {
+			            $('#form-password').removeAttr('hidden');
+			            $('#form-login').css('display','none');
+			            if ($('#inputNewPassword').val() !== '') {
+			            	cognitoUser.completeNewPasswordChallenge($('#inputNewPassword').val(), [], this);
+			            }
+			        },
+			        onSuccess: function (result) {
+			            AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+			                IdentityPoolId : 'us-east-1:ab613f76-6309-449f-9017-92e482467835',
+			                Logins : {
+			                    'cognito-idp.us-east-1.amazonaws.com/us-east-1_b388hyeFn' : result.getIdToken().getJwtToken()
+			                }
+			            });
+			            
+			            AWS.config.update({
+							region: 'us-east-1',
+							credentials: new AWS.CognitoIdentityCredentials({
+								IdentityPoolId: 'us-east-1:ab613f76-6309-449f-9017-92e482467835',
+				                Logins : {
+				                    'cognito-idp.us-east-1.amazonaws.com/us-east-1_b388hyeFn' : result.getIdToken().getJwtToken()
+				                }
+							})
+						});
+						s3 = new AWS.S3({
+							apiVersion: '2006-03-01',
+							params: {Bucket: 'serverless-cms'}
+						});
+
+						loadPage('adminIndex');
+			        },
+			        onFailure: function(err) {
+			            alert(err);
+			        }
+			    });
+		    });
+
+		    // Navigation
+		    $('body').on('click','.nav-link', function(e) {
+		    	e.preventDefault();
+		    	loadPage($(this).attr('href').slice(1));
+		    });
+			
+			function loadPage(pageId) {
+		    	adminData = {};
+				$.getJSON('admin.json', function( data ) {
+					adminData = data;
+	            }).always(function() {
+	            	$('.container').html($.render[pageId]($.extend(adminData,{active:pageId})));
+	            	initRichTextEditor();
+	            });
+		    }
+
+		    function initRichTextEditor(settings) {
+		    	tinymce.EditorManager.editors = [];
+		    	tinymce.init($.extend({
+            		selector:'textarea',
+            		menubar: false,
+            		statusbar: false,
+            		resize: true,
+					toolbar: 'undo redo | styleselect | bold italic | link',
+					plugins: 'autolink autoresize link',
+					init_instance_callback : function(editor) {
+					    $('.mce-notification-warning').remove();
+					}
+				}, settings ? settings : {}));
+		    }
+
+		    // Admin Home
+			$('body').on('submit','#form-admin',function(e) {
+		    	e.preventDefault();
+		    	var $formFields = $('#form-admin').find('input, textarea, select').not(':input[type=button], :input[type=submit], :input[type=reset]');
+
+				$formFields.each(function() {
+					adminData[$(this).attr('name')] = $(this).val();
+				});
+				
+				var uploads = generateHTMLUploads('index','blog','contact');
+				uploads.push(generateAdminDataUpload());
+				
+				if ($('#calloutBackgroundImage').prop('files').length) {
+					uploads.push(upload({
+					    Key: 'img/callout.jpg',
+					    Body: $('#calloutBackgroundImage').prop('files')[0],
+					    ACL: 'public-read'
+					}));
+				}
+				
+				$.when.apply($, uploads).then(function() {
+					$('#form-admin').prepend('<p id="success">Update successful! <a href="../index.html">View Website</a></p>');
+				});
+
+		    });
+
+		    // Admin Blog
+		    $('body').on('click','#newPostButton,.edit-post',function(e) {
+		    	e.preventDefault();
+		    	$('#blogPosts').remove();
+		    	if ($(this).is('#newPostButton')) {
+		    		editPost({});
+		    	} else {
+		    		var postId = $(this).attr('data-id');
+		    		var postUrl = $(this).attr('data-url');
+
+		    		$('<div />').load('../'+postUrl, function() {
+		    			editPost({
+		    				id:postId,
+		    				title:$(this).find('h1').text(),
+		    				content:$(this).find('#content').html()
+		    			});
+		    		});
+		    	}
+		    });
+
+		    function editPost(postData) {
+		    	$('.container').append($.render.editBlogPost(postData));
+		    	initRichTextEditor({
+		    		toolbar: 'undo redo | styleselect | bold italic | bullist numlist | link addImage',
+		    		setup : function(editor) {
+						editor.addButton('addImage', {
+							text: 'Add Image',
+							icon: false,
+							onclick: function() {
+								// Open window
+								editor.windowManager.open({
+									title: 'Add Image',
+									body: [{
+											type: 'button', name: 'uploadImage', label:'Select an image to upload', text: 'Browse',
+											onclick: function(e) {
+												$('#imageUploadFile').click();
+											}, onPostRender: function() {
+												addImageButton = this;
+											}
+										},{
+											type: 'textbox', name: 'imageDescription', label:'Image Description'
+										}],
+									buttons: [{
+											text: 'Cancel',
+											onclick: 'close'
+										},{
+											text: 'OK',
+											classes: 'widget btn primary first abs-layout-item',
+											disabled: true,
+											onclick: 'close',
+											id:'addImageButton'
+										}]
+								});
+							}
+						});
+					}
+		    	});
+		    }
+
+		    var addImageButton;
+		    $('body').on('change','#imageUploadFile', function() {
+		    	$('#'+addImageButton._id+'-l').html('<span style="color:#fff;background:#5cb85c;padding:0 2px;border-radius:4px;">&#10003;</span> Image selected');
+				$('#addImageButton').removeClass('mce-disabled');
+			});
+			
+			$('body').on('click','#addImageButton',function() {
+				if ($(this).hasClass('mce-disabled')) {
+					alert('Please select an image');
+				} else {
+					var fileUploadData,
+						extension = 'jpg',
+						mimeType = $('#imageUploadFile')[0].files[0].type; // You can get the mime type
+
+					if (mimeType.indexOf('png') != -1) {
+						extension = 'png';
+					}
+					if (mimeType.indexOf('gif') != -1) {
+						extension = 'gif';
+					}
+
+					var filepath = 'img/blog/'+((new Date().getMonth())+1)+'/'+Date.now()+'.'+extension;
+					
+					upload({
+					    Key: filepath,
+					    Body: $('#imageUploadFile').prop('files')[0],
+					    ACL: 'public-read'
+					}).done(function() {
+						var bucketUrl = 'http://serverless-cms.s3-website-us-east-1.amazonaws.com/';
+						tinyMCE.activeEditor.execCommand('mceInsertRawHTML', false, '<p><img src="'+bucketUrl+filepath+'" alt="'+$('.mce-textbox').val()+'" /></p>');
+						$('#imageUploadFile').val();
+						tinyMCE.activeEditor.windowManager.close();
+					});
+				}
+			});
+
+			$('body').on('click','#cancelEdit',function(e) {
+				e.preventDefault();
+				$('.nav-item.active a').click();
+			});
+
+		    $('body').on('submit','#form-blog',function(e) {
+		    	e.preventDefault();
+
+		    	var updateBlogPosts = $.Deferred();
+		    	if ($(this).attr('data-post-id') === '') {
+		    		postId = Date.now();
+		    	} else {
+		    		postId = $(this).attr('data-post-id');
+		    	}
+
+		    	if (!adminData.posts) {
+		    		adminData.posts = [];
+		    	}
+
+		    	var postUrl = 'posts/'+($('#title').val().toLowerCase().replace(/[^\w\s]/gi, '').replace(/\s/g,'-'))+'.html';
+		    	var postTitle = $('#title').val();
+		    	var postContent = tinyMCE.activeEditor.getContent({format:'raw'});
+
+		    	adminData.posts.push({
+		    		url: postUrl,
+		    		title: postTitle,
+		    		excerpt: $(postContent)[0].innerText
+		    	});
+
+		    	var uploads = generateHTMLUploads('blog');
+		    	uploads.push(generateAdminDataUpload());
+		    	
+		    	var postHTML = '<!DOCTYPE html>' + $.render['blogPostTemplate']($.extend(adminData,{
+		    		active: 'blog',
+		    		title: postTitle,
+		    		content: postContent,
+		    		navPath: '../'
+		    	}));
+	    		
+	    		var fileHTML = new File([postHTML], postUrl, {type: "text/html", lastModified: new Date()});
+	    		uploads.push(upload({
+					    Key: postUrl,
+					    Body: postHTML,
+					    ACL: 'public-read',
+					    ContentDisposition: 'inline',
+					    ContentType: 'text/html'
+					})
+	    		)
+
+		    	$.when.apply($, uploads).then(function() {
+		    		loadPage('adminBlog');
+				});
+
+		    });
+
+		    // Upload Helpers
+		    function generateHTMLUploads() {
+		    	var htmlUploads = [];
+		    	for (var i = 0; i < arguments.length; i++) {
+		    		var HTML = '<!DOCTYPE html>' + $.render[arguments[i]+'Template']($.extend(adminData,{active:arguments[i]}));
+		    		var fileHTML = new File([HTML], arguments[i]+'.html', {type: "text/html", lastModified: new Date()});
+		    		htmlUploads.push(upload({
+						    Key: arguments[i]+'.html',
+						    Body: fileHTML,
+						    ACL: 'public-read',
+						    ContentDisposition: 'inline',
+						    ContentType: 'text/html'
+						})
+		    		);
+		    	}
+		    	return htmlUploads;
+		    }
+
+		    function generateAdminDataUpload() {
+		    	return upload({
+				    Key: 'admin/admin.json',
+				    Body: new File([JSON.stringify(adminData)], 'admin.json'),
+				    ACL: 'public-read'
+				});
+		    }
+
+		    function upload(uploadData) {
+		    	var doUpload = $.Deferred();
+		    	s3.upload(uploadData, function(err, data) {
+				    if (err) {
+				    	return alert('There was an error: ', err.message);
+				    	doUpload.reject();
+					} else {
+						doUpload.resolve();
+					}
+				});
+				return doUpload;
+		    }
+		});
+	</script>
+  </body>
+</html>
